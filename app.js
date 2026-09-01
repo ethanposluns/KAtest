@@ -113,6 +113,18 @@ function statusLabel(status) {
   return STATUS_LABELS[status] || status;
 }
 
+// Which of the two note views a case's status allows. A case in
+// "Pre Assessment" only ever offers Pre Assessment notes; a case in
+// "Process" only ever offers Process notes.
+var STATUS_VIEW = {
+  New: "preassessment",
+  Review: "process"
+};
+
+function viewForStatus(status) {
+  return STATUS_VIEW[status] || "preassessment";
+}
+
 var ICONS = {
   summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
   news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h13a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 13h7M19 8v9a2 2 0 0 1-2 2"/></svg>',
@@ -204,6 +216,8 @@ function renderQueue() {
 function renderDetail(c) {
   var t = TICKERS[c.ticker];
   var docIcon = c.docType === "News" ? ICONS.news : ICONS.summary;
+  var allowedKey = viewForStatus(c.status);
+  var allowedView = VIEWS[allowedKey];
 
   var headHtml =
     '<div class="detail-head">' +
@@ -220,14 +234,9 @@ function renderDetail(c) {
 
   var pickerHtml =
     '<div class="view-picker">' +
-      Object.keys(VIEWS).map(function (key) {
-        var view = VIEWS[key];
-        return (
-          '<button type="button" class="view-tab' + (selectedView === key ? " is-active" : "") + '" data-view="' + key + '">' +
-            view.icon + escapeHtml(view.label) +
-          '</button>'
-        );
-      }).join("") +
+      '<button type="button" class="view-tab' + (selectedView === allowedKey ? " is-active" : "") + '" data-view="' + allowedKey + '">' +
+        allowedView.icon + escapeHtml(allowedView.label) +
+      '</button>' +
     '</div>';
 
   var lowerHtml;
@@ -235,7 +244,7 @@ function renderDetail(c) {
     lowerHtml =
       '<div class="view-empty">' + ICONS.doc +
         '<p class="lead">No notes pulled yet</p>' +
-        '<p>Choose Pre Assessment or Process above to fetch this case&rsquo;s notes.</p>' +
+        '<p>Choose <strong>' + escapeHtml(allowedView.label) + '</strong> above to fetch this case&rsquo;s notes.</p>' +
       '</div>';
   } else {
     var view = VIEWS[selectedView];
