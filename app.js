@@ -9,8 +9,13 @@
 var TICKERS = {
   AAPL: {
     name: "Apple Inc.",
-    price: "227.44", change: "+1.82", changePct: "+0.81%", up: true,
-    marketCap: "3.41T", sector: "Technology", industry: "Consumer Electronics",
+    sector: "Technology", industry: "Consumer Electronics",
+    stats: {
+      previousClose: "225.62", open: "226.10", bid: "227.40 x 200", ask: "227.48 x 300",
+      daysRange: "225.40 - 228.90", week52Range: "164.08 - 237.23", marketCap: "3.41T", earningsDate: "Oct 30, 2026",
+      volume: "48,213,000", avgVolume: "52,340,000", beta: "1.19", forwardDividend: "1.04 (0.46%)",
+      peRatio: "34.62", exDividendDate: "Aug 11, 2026", eps: "6.57", targetEst: "245.30"
+    },
     summary: "Apple designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide, and offers services including AppleCare, iCloud, and the App Store ecosystem.",
     news: [
       { headline: "Apple expands on-device AI features in latest iOS update", time: "3h ago", snippet: "The release broadens Apple Intelligence to more languages and adds new writing and photo tools across iPhone and iPad." },
@@ -20,8 +25,13 @@ var TICKERS = {
   },
   TSLA: {
     name: "Tesla, Inc.",
-    price: "268.90", change: "-4.15", changePct: "-1.52%", up: false,
-    marketCap: "858.2B", sector: "Consumer Cyclical", industry: "Auto Manufacturers",
+    sector: "Consumer Cyclical", industry: "Auto Manufacturers",
+    stats: {
+      previousClose: "273.05", open: "271.80", bid: "268.85 x 400", ask: "269.10 x 250",
+      daysRange: "265.10 - 274.55", week52Range: "138.80 - 299.29", marketCap: "858.2B", earningsDate: "Oct 21, 2026",
+      volume: "68,940,000", avgVolume: "71,205,000", beta: "2.31", forwardDividend: "--",
+      peRatio: "118.47", exDividendDate: "--", eps: "2.27", targetEst: "295.00"
+    },
     summary: "Tesla designs, manufactures, and sells electric vehicles and energy generation and storage systems, and provides related service, charging, insurance, and software.",
     news: [
       { headline: "Delivery numbers top estimates for the quarter", time: "5h ago", snippet: "Model Y and Model 3 shipments drove the beat, though average selling prices continued to soften." },
@@ -31,8 +41,13 @@ var TICKERS = {
   },
   MSFT: {
     name: "Microsoft Corporation",
-    price: "512.30", change: "+3.05", changePct: "+0.60%", up: true,
-    marketCap: "3.80T", sector: "Technology", industry: "Software—Infrastructure",
+    sector: "Technology", industry: "Software—Infrastructure",
+    stats: {
+      previousClose: "509.25", open: "510.40", bid: "512.20 x 100", ask: "512.55 x 150",
+      daysRange: "508.10 - 514.20", week52Range: "385.58 - 521.66", marketCap: "3.80T", earningsDate: "Oct 24, 2026",
+      volume: "19,870,000", avgVolume: "21,450,000", beta: "0.90", forwardDividend: "3.32 (0.65%)",
+      peRatio: "37.15", exDividendDate: "Aug 21, 2026", eps: "13.79", targetEst: "545.00"
+    },
     summary: "Microsoft develops, licenses, and supports software, services, and devices worldwide, including Azure cloud computing, Microsoft 365 productivity software, and Xbox gaming.",
     news: [
       { headline: "Azure growth accelerates on AI infrastructure demand", time: "2h ago", snippet: "Cloud revenue growth reaccelerated as enterprise customers expanded committed AI workloads." },
@@ -42,8 +57,13 @@ var TICKERS = {
   },
   NVDA: {
     name: "NVIDIA Corporation",
-    price: "189.75", change: "+6.40", changePct: "+3.49%", up: true,
-    marketCap: "4.62T", sector: "Technology", industry: "Semiconductors",
+    sector: "Technology", industry: "Semiconductors",
+    stats: {
+      previousClose: "183.35", open: "185.20", bid: "189.70 x 500", ask: "189.90 x 400",
+      daysRange: "183.90 - 191.40", week52Range: "86.62 - 195.00", marketCap: "4.62T", earningsDate: "Nov 19, 2026",
+      volume: "215,300,000", avgVolume: "198,750,000", beta: "1.68", forwardDividend: "0.04 (0.02%)",
+      peRatio: "52.30", exDividendDate: "Sep 11, 2026", eps: "3.63", targetEst: "220.00"
+    },
     summary: "NVIDIA designs graphics, compute, and networking solutions, including GPUs for gaming and data centers, and platforms for AI, autonomous machines, and robotics.",
     news: [
       { headline: "Next-generation AI chip enters full production", time: "6h ago", snippet: "The new platform is shipping to major cloud customers ahead of the prior schedule." },
@@ -53,8 +73,13 @@ var TICKERS = {
   },
   AMZN: {
     name: "Amazon.com, Inc.",
-    price: "231.18", change: "+0.94", changePct: "+0.41%", up: true,
-    marketCap: "2.46T", sector: "Consumer Cyclical", industry: "Internet Retail",
+    sector: "Consumer Cyclical", industry: "Internet Retail",
+    stats: {
+      previousClose: "230.24", open: "230.90", bid: "231.10 x 300", ask: "231.30 x 200",
+      daysRange: "229.40 - 232.75", week52Range: "151.61 - 242.52", marketCap: "2.46T", earningsDate: "Oct 29, 2026",
+      volume: "33,120,000", avgVolume: "35,600,000", beta: "1.15", forwardDividend: "--",
+      peRatio: "34.90", exDividendDate: "--", eps: "6.62", targetEst: "255.00"
+    },
     summary: "Amazon operates online and physical retail stores, offers cloud computing through AWS, and provides advertising, subscription, and logistics services worldwide.",
     news: [
       { headline: "AWS backlog grows as enterprise AI workloads expand", time: "4h ago", snippet: "Remaining performance obligations rose again as customers signed longer-term cloud commitments." },
@@ -64,8 +89,13 @@ var TICKERS = {
   },
   JPM: {
     name: "JPMorgan Chase & Co.",
-    price: "312.60", change: "-1.10", changePct: "-0.35%", up: false,
-    marketCap: "890.5B", sector: "Financial Services", industry: "Banks—Diversified",
+    sector: "Financial Services", industry: "Banks—Diversified",
+    stats: {
+      previousClose: "313.70", open: "313.10", bid: "312.50 x 200", ask: "312.75 x 300",
+      daysRange: "310.85 - 314.40", week52Range: "194.83 - 320.15", marketCap: "890.5B", earningsDate: "Oct 14, 2026",
+      volume: "8,450,000", avgVolume: "9,120,000", beta: "1.08", forwardDividend: "5.60 (1.79%)",
+      peRatio: "14.25", exDividendDate: "Oct 6, 2026", eps: "21.94", targetEst: "335.00"
+    },
     summary: "JPMorgan Chase provides investment banking, consumer and commercial banking, and asset and wealth management services worldwide.",
     news: [
       { headline: "Net interest income guidance revised for the year", time: "1d ago", snippet: "Management nudged full-year guidance higher, citing steadier deposit costs." },
@@ -74,6 +104,15 @@ var TICKERS = {
     ]
   }
 };
+
+// Layout of the Pre Assessment stats table: 4 rows of 4 label/stats-key
+// pairs each, matching the Yahoo Finance Summary page's quote stats.
+var STAT_ROWS = [
+  [["Previous Close", "previousClose"], ["Day's Range", "daysRange"], ["Market Cap (intraday)", "marketCap"], ["Earnings Date (est.)", "earningsDate"]],
+  [["Open", "open"], ["52 Week Range", "week52Range"], ["Beta (5Y Monthly)", "beta"], ["Forward Dividend & Yield", "forwardDividend"]],
+  [["Bid", "bid"], ["Volume", "volume"], ["PE Ratio (TTM)", "peRatio"], ["Ex-Dividend Date", "exDividendDate"]],
+  [["Ask", "ask"], ["Avg. Volume", "avgVolume"], ["EPS (TTM)", "eps"], ["1y Target Est", "targetEst"]]
+];
 
 // ---------------------------------------------------------------
 // Case queue. Each case already carries a document type ("Summary"
@@ -129,7 +168,8 @@ var ICONS = {
   summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
   news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h13a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 13h7M19 8v9a2 2 0 0 1-2 2"/></svg>',
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 15 15 9M10 6l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 18l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg>',
-  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h6l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>'
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h6l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>'
 };
 
 // The two note types a user can pull for a case once it's open. Each
@@ -143,10 +183,26 @@ var VIEWS = {
     urlPath: "",
     body: function (t) {
       return (
-        '<div class="stat-grid">' +
-          '<div class="stat"><p class="k">Market Cap</p><p class="v">' + t.marketCap + '</p></div>' +
-          '<div class="stat"><p class="k">Sector</p><p class="v" style="font-size:12px">' + escapeHtml(t.sector) + '</p></div>' +
-          '<div class="stat"><p class="k">Industry</p><p class="v" style="font-size:12px">' + escapeHtml(t.industry) + '</p></div>' +
+        '<div class="stats-table">' +
+          STAT_ROWS.map(function (row) {
+            return (
+              '<div class="stats-row">' +
+                row.map(function (pair) {
+                  var label = pair[0];
+                  var value = t.stats[pair[1]];
+                  return (
+                    '<div class="stats-cell">' +
+                      '<span class="k">' + escapeHtml(label) + '</span>' +
+                      '<span class="v mono">' + escapeHtml(value) + '</span>' +
+                    '</div>'
+                  );
+                }).join("") +
+              '</div>'
+            );
+          }).join("") +
+        '</div>' +
+        '<div class="overview-line">' + ICONS.chevron +
+          '<strong>' + escapeHtml(t.name) + ' Overview</strong> &mdash; ' + escapeHtml(t.industry) + ' / ' + escapeHtml(t.sector) +
         '</div>' +
         '<p class="summary-text">' + escapeHtml(t.summary) + '</p>'
       );
@@ -159,7 +215,7 @@ var VIEWS = {
     body: function (t) {
       return (
         '<ul class="news-list">' +
-          t.news.map(function (n) {
+          t.news.slice(0, 3).map(function (n) {
             return (
               '<li class="news-item">' +
                 '<p class="headline">' + escapeHtml(n.headline) + '</p>' +
@@ -225,10 +281,6 @@ function renderDetail(c) {
         '<p class="id mono">' + c.id + '</p>' +
         '<h2><span class="ticker-chip mono">' + c.ticker + '</span>' + escapeHtml(t.name) + '</h2>' +
         '<p class="sub"><span class="sub-icon">' + docIcon + '</span>Document type: ' + escapeHtml(typeLabel(c.docType)) + ' &middot; Submitted ' + c.submitted + '</p>' +
-      '</div>' +
-      '<div class="price-block">' +
-        '<p class="px mono">$' + t.price + '</p>' +
-        '<p class="chg mono ' + (t.up ? "up" : "down") + '">' + t.change + ' (' + t.changePct + ')</p>' +
       '</div>' +
     '</div>';
 
