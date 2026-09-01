@@ -1,106 +1,108 @@
 "use strict";
 
 // ---------------------------------------------------------------
-// Mock "process notes" source data, keyed by client ID (ticker).
-// In production this lookup would hit the actual process-notes
-// link tied to the case's document type + client ID, instead of
-// an analyst finding and pasting it into the assistant by hand.
+// "Process notes" source data, keyed by client ID (ticker). This is
+// a live snapshot pulled from finance.yahoo.com/quote/{TICKER}/ and
+// /news/ on 2026-09-01 (see README) — not a real-time feed. In
+// production this lookup would hit the actual process-notes link
+// tied to the case's document type + client ID, instead of an
+// analyst finding and pasting it into the assistant by hand.
 // ---------------------------------------------------------------
 var TICKERS = {
   AAPL: {
     name: "Apple Inc.",
     sector: "Technology", industry: "Consumer Electronics",
     stats: {
-      previousClose: "225.62", open: "226.10", bid: "227.40 x 200", ask: "227.48 x 300",
-      daysRange: "225.40 - 228.90", week52Range: "164.08 - 237.23", marketCap: "3.41T", earningsDate: "Oct 30, 2026",
-      volume: "48,213,000", avgVolume: "52,340,000", beta: "1.19", forwardDividend: "1.04 (0.46%)",
-      peRatio: "34.62", exDividendDate: "Aug 11, 2026", eps: "6.57", targetEst: "245.30"
+      previousClose: "319.70", open: "319.56", bid: "312.00 x 300", ask: "315.96 x 4000",
+      daysRange: "312.85 - 321.23", week52Range: "225.95 - 344.57", marketCap: "4.624T", earningsDate: "Oct 29, 2026",
+      volume: "40,667,429", avgVolume: "54,939,019", beta: "1.09", forwardDividend: "1.08 (0.34%)",
+      peRatio: "36.29", exDividendDate: "Aug 10, 2026", eps: "8.73", targetEst: "324.45"
     },
-    summary: "Apple designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide, and offers services including AppleCare, iCloud, and the App Store ecosystem.",
+    summary: "Apple designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories globally. The company offers iPhone, Mac, iPad, and various services including the App Store, Apple Music, and Apple TV+.",
     news: [
-      { headline: "Apple expands on-device AI features in latest iOS update", time: "3h ago", snippet: "The release broadens Apple Intelligence to more languages and adds new writing and photo tools across iPhone and iPad." },
-      { headline: "Services revenue hits new quarterly record", time: "1d ago", snippet: "App Store, iCloud, and AppleCare subscriptions continue to outpace hardware growth, with the segment topping $24B for the quarter." },
-      { headline: "Supplier shifts more assembly outside China", time: "2d ago", snippet: "Contract manufacturers are ramping capacity in India and Vietnam ahead of the next product cycle." }
+      { headline: "Apple's new CEO inherits a fortune and an AI question", time: "1h ago", snippet: "New Apple CEO John Ternus takes over amid questions about the company's artificial intelligence strategy and initiatives." },
+      { headline: "New Apple CEO John Ternus Inherits AI Test as AAPL Stock Slips", time: "2h ago", snippet: "The leadership transition occurs as Apple's stock experiences a decline and AI remains a central challenge for the company." },
+      { headline: "What Tim Cook told employees on his last day at Apple", time: "12h ago", snippet: "Tim Cook addressed staff members as he concluded his 15-year tenure as CEO of the tech giant." }
     ]
   },
   TSLA: {
     name: "Tesla, Inc.",
     sector: "Consumer Cyclical", industry: "Auto Manufacturers",
     stats: {
-      previousClose: "273.05", open: "271.80", bid: "268.85 x 400", ask: "269.10 x 250",
-      daysRange: "265.10 - 274.55", week52Range: "138.80 - 299.29", marketCap: "858.2B", earningsDate: "Oct 21, 2026",
-      volume: "68,940,000", avgVolume: "71,205,000", beta: "2.31", forwardDividend: "--",
-      peRatio: "118.47", exDividendDate: "--", eps: "2.27", targetEst: "295.00"
+      previousClose: "348.75", open: "347.15", bid: "366.18 x 200", ask: "369.00 x 200",
+      daysRange: "347.15 - 368.92", week52Range: "297.38 - 498.83", marketCap: "1.453T", earningsDate: "Oct 21, 2026",
+      volume: "61,157,428", avgVolume: "41,543,255", beta: "1.83", forwardDividend: "--",
+      peRatio: "322.76", exDividendDate: "--", eps: "1.14", targetEst: "390.09"
     },
-    summary: "Tesla designs, manufactures, and sells electric vehicles and energy generation and storage systems, and provides related service, charging, insurance, and software.",
+    summary: "Tesla designs, develops, manufactures, and sells electric vehicles and energy generation and storage systems globally. The company operates in Automotive and Energy Generation segments, offering EVs, solar products, and battery storage solutions.",
     news: [
-      { headline: "Delivery numbers top estimates for the quarter", time: "5h ago", snippet: "Model Y and Model 3 shipments drove the beat, though average selling prices continued to soften." },
-      { headline: "Energy storage deployments double year-over-year", time: "1d ago", snippet: "Megapack installations are now a larger share of gross profit than in any prior quarter." },
-      { headline: "Company outlines next-generation manufacturing line", time: "3d ago", snippet: "Executives described a lower-cost production process aimed at a more affordable model." }
+      { headline: "Tesla Stock Crushes Rivian, Chinese EV Rivals In August — Wall Street Sees More Upside Before Cybercab Event", time: "30m ago", snippet: "Tesla's stock significantly outperformed competitors during August, with analysts expecting continued gains leading up to the company's upcoming Cybercab event." },
+      { headline: "AMD vs. Nvidia: SpaceX and Tesla CEO Elon Musk Weighs In on His Top Pick", time: "15m ago", snippet: "Elon Musk shared his preference between chip manufacturers AMD and Nvidia in a recent discussion about semiconductor choices." },
+      { headline: "Here comes the AI capex shocker, Goldman Sachs says", time: "12h ago", snippet: "Goldman Sachs analysts predict a significant surprise related to artificial intelligence capital expenditures, with implications for tech stocks including Tesla." }
     ]
   },
   MSFT: {
     name: "Microsoft Corporation",
     sector: "Technology", industry: "Software—Infrastructure",
     stats: {
-      previousClose: "509.25", open: "510.40", bid: "512.20 x 100", ask: "512.55 x 150",
-      daysRange: "508.10 - 514.20", week52Range: "385.58 - 521.66", marketCap: "3.80T", earningsDate: "Oct 24, 2026",
-      volume: "19,870,000", avgVolume: "21,450,000", beta: "0.90", forwardDividend: "3.32 (0.65%)",
-      peRatio: "37.15", exDividendDate: "Aug 21, 2026", eps: "13.79", targetEst: "545.00"
+      previousClose: "513.53", open: "510.33", bid: "505.03 x 600", ask: "509.47 x 500",
+      daysRange: "506.40 - 512.19", week52Range: "349.20 - 553.72", marketCap: "3.767T", earningsDate: "Oct 28, 2026",
+      volume: "26,637,042", avgVolume: "38,141,796", beta: "1.10", forwardDividend: "3.64 (0.71%)",
+      peRatio: "28.56", exDividendDate: "Aug 20, 2026", eps: "17.76", targetEst: "569.45"
     },
-    summary: "Microsoft develops, licenses, and supports software, services, and devices worldwide, including Azure cloud computing, Microsoft 365 productivity software, and Xbox gaming.",
+    summary: "Microsoft develops and supports technology solutions including operating systems, server applications, business software, development tools, and devices like PCs and gaming consoles. The company operates across three segments: Productivity and Business Processes, Intelligent Cloud, and More Personal Computing.",
     news: [
-      { headline: "Azure growth accelerates on AI infrastructure demand", time: "2h ago", snippet: "Cloud revenue growth reaccelerated as enterprise customers expanded committed AI workloads." },
-      { headline: "Copilot seat growth cited as key enterprise driver", time: "1d ago", snippet: "Management pointed to expanding Copilot adoption across Microsoft 365 customers as a growth lever." },
-      { headline: "Company announces new data center investment", time: "4d ago", snippet: "The build-out adds capacity across three regions to support growing compute demand." }
+      { headline: "Here comes the AI capex shocker, Goldman Sachs says", time: "12h ago", snippet: "Goldman Sachs discusses anticipated surprises regarding artificial intelligence capital expenditure trends affecting major tech companies." },
+      { headline: "Agentic AI Has Arrived. Is Your Workforce Ready to Leverage It?", time: "2h ago", snippet: "An examination of how organizations can prepare their employees to work alongside and benefit from autonomous AI systems." },
+      { headline: "This Bitcoin Miner Says It Has $4 Billion of Contracted AI ARR", time: "2h ago", snippet: "A cryptocurrency mining firm reports substantial contracted annual recurring revenue from AI services, with analyst projections suggesting significant growth potential." }
     ]
   },
   NVDA: {
     name: "NVIDIA Corporation",
     sector: "Technology", industry: "Semiconductors",
     stats: {
-      previousClose: "183.35", open: "185.20", bid: "189.70 x 500", ask: "189.90 x 400",
-      daysRange: "183.90 - 191.40", week52Range: "86.62 - 195.00", marketCap: "4.62T", earningsDate: "Nov 19, 2026",
-      volume: "215,300,000", avgVolume: "198,750,000", beta: "1.68", forwardDividend: "0.04 (0.02%)",
-      peRatio: "52.30", exDividendDate: "Sep 11, 2026", eps: "3.63", targetEst: "220.00"
+      previousClose: "217.55", open: "218.86", bid: "220.10 x 4000", ask: "221.48 x 200",
+      daysRange: "216.21 - 221.29", week52Range: "164.07 - 236.54", marketCap: "5.331T", earningsDate: "Nov 17, 2026",
+      volume: "124,033,835", avgVolume: "138,830,287", beta: "2.21", forwardDividend: "1.00 (0.46%)",
+      peRatio: "27.88", exDividendDate: "Sep 10, 2026", eps: "7.92", targetEst: "323.42"
     },
-    summary: "NVIDIA designs graphics, compute, and networking solutions, including GPUs for gaming and data centers, and platforms for AI, autonomous machines, and robotics.",
+    summary: "NVIDIA operates as a data center scale AI infrastructure company providing accelerated computing platforms, AI solutions, and automotive technologies across multiple markets including gaming, professional visualization, and data centers.",
     news: [
-      { headline: "Next-generation AI chip enters full production", time: "6h ago", snippet: "The new platform is shipping to major cloud customers ahead of the prior schedule." },
-      { headline: "Data center segment remains primary growth driver", time: "1d ago", snippet: "Data center revenue again outpaced gaming and professional visualization combined." },
-      { headline: "Company deepens partnership with cloud providers", time: "2d ago", snippet: "New agreements expand reserved capacity for AI training clusters into next year." }
+      { headline: "AMD vs. Nvidia: SpaceX and Tesla CEO Elon Musk Weighs In on His Top Pick", time: "15m ago", snippet: "Motley Fool article discussing Elon Musk's perspective on the competitive landscape between AMD and NVIDIA in the chip market." },
+      { headline: "What Nvidia's stellar Q2 earnings represent for AI in the rest of 2026", time: "14h ago", snippet: "Yahoo Finance Video examining how NVIDIA's strong quarterly results signal momentum for artificial intelligence development through 2026." },
+      { headline: "Nvidia Just Put $3.5 Billion Behind Its Next AI Expansion", time: "3h ago", snippet: "GuruFocus.com report covering NVIDIA's substantial capital commitment toward advancing its artificial intelligence initiatives." }
     ]
   },
   AMZN: {
     name: "Amazon.com, Inc.",
     sector: "Consumer Cyclical", industry: "Internet Retail",
     stats: {
-      previousClose: "230.24", open: "230.90", bid: "231.10 x 300", ask: "231.30 x 200",
-      daysRange: "229.40 - 232.75", week52Range: "151.61 - 242.52", marketCap: "2.46T", earningsDate: "Oct 29, 2026",
-      volume: "33,120,000", avgVolume: "35,600,000", beta: "1.15", forwardDividend: "--",
-      peRatio: "34.90", exDividendDate: "--", eps: "6.62", targetEst: "255.00"
+      previousClose: "266.43", open: "263.83", bid: "255.00 x 300", ask: "259.50 x 100",
+      daysRange: "257.15 - 264.36", week52Range: "196.00 - 287.20", marketCap: "2.802T", earningsDate: "Oct 29, 2026",
+      volume: "45,422,317", avgVolume: "48,954,106", beta: "1.45", forwardDividend: "--",
+      peRatio: "20.88", exDividendDate: "--", eps: "12.44", targetEst: "327.67"
     },
-    summary: "Amazon operates online and physical retail stores, offers cloud computing through AWS, and provides advertising, subscription, and logistics services worldwide.",
+    summary: "Amazon engages in retail sales of consumer products, advertising, and subscription services through online and physical stores. The company operates three segments: North America, International, and Amazon Web Services (AWS), along with electronic devices and media content production.",
     news: [
-      { headline: "AWS backlog grows as enterprise AI workloads expand", time: "4h ago", snippet: "Remaining performance obligations rose again as customers signed longer-term cloud commitments." },
-      { headline: "Holiday hiring plans point to a busier season", time: "1d ago", snippet: "The company said it would add seasonal roles across its fulfillment and delivery networks." },
-      { headline: "Advertising business continues double-digit growth", time: "3d ago", snippet: "Sponsored product placements remained the fastest-growing part of the ad segment." }
+      { headline: "Here comes the AI capex shocker, Goldman Sachs says", time: "12h ago", snippet: "Analysis of significant capital expenditure implications related to artificial intelligence investments among major tech companies." },
+      { headline: "ZonPrep Acquires FNSKU Studio and Wizard-Industries, Deepening Its Investment in Amazon Inbound Logistics", time: "1h ago", snippet: "ZonPrep expanded its Amazon logistics capabilities through acquisitions focused on inbound logistics optimization." },
+      { headline: "FTC sues Amazon, alleging it overcharged advertisers", time: "3h ago", snippet: "The Federal Trade Commission filed legal action against Amazon, claiming the company manipulated advertising auctions to “secretly upcharge” advertisers." }
     ]
   },
   JPM: {
     name: "JPMorgan Chase & Co.",
     sector: "Financial Services", industry: "Banks—Diversified",
     stats: {
-      previousClose: "313.70", open: "313.10", bid: "312.50 x 200", ask: "312.75 x 300",
-      daysRange: "310.85 - 314.40", week52Range: "194.83 - 320.15", marketCap: "890.5B", earningsDate: "Oct 14, 2026",
-      volume: "8,450,000", avgVolume: "9,120,000", beta: "1.08", forwardDividend: "5.60 (1.79%)",
-      peRatio: "14.25", exDividendDate: "Oct 6, 2026", eps: "21.94", targetEst: "335.00"
+      previousClose: "357.62", open: "355.90", bid: "--", ask: "--",
+      daysRange: "354.77 - 357.75", week52Range: "279.10 - 366.50", marketCap: "946.367B", earningsDate: "Oct 13, 2026",
+      volume: "7,742,145", avgVolume: "8,380,647", beta: "0.98", forwardDividend: "6.00 (1.68%)",
+      peRatio: "15.25", exDividendDate: "Jul 6, 2026", eps: "23.35", targetEst: "374.57"
     },
-    summary: "JPMorgan Chase provides investment banking, consumer and commercial banking, and asset and wealth management services worldwide.",
+    summary: "JPMorgan Chase operates as a diversified banking and financial holding company with operations across 66 countries. The firm generates revenue through consumer and community banking, commercial and investment banking, and asset and wealth management divisions, managing over $7.6 trillion in client assets.",
     news: [
-      { headline: "Net interest income guidance revised for the year", time: "1d ago", snippet: "Management nudged full-year guidance higher, citing steadier deposit costs." },
-      { headline: "Investment banking fees rebound", time: "2d ago", snippet: "Advisory and underwriting activity picked up from the prior quarter's pace." },
-      { headline: "Firm expands branch footprint in new markets", time: "5d ago", snippet: "The expansion continues a multi-year push into regions outside its traditional base." }
+      { headline: "How Investors May Respond To JPMorgan Chase (JPM) Bond Issuance, Branch Expansion and Higher Payouts", time: "9h ago", snippet: "The article discusses potential investor reactions to JPMorgan's bond offerings, branch expansion plans, and increased payouts to shareholders." },
+      { headline: "JPMorgan Drops 'Bullish' Stance On US Stocks After Warsh's Hawkish Tone At Jackson Hole, Shifts To 'Tactically Cautious'", time: "10h ago", snippet: "Following hawkish commentary at Jackson Hole, JPMorgan adjusted its market outlook from bullish to a more cautious tactical position on U.S. equities." },
+      { headline: "JPMorgan Slips as 60% Hike Odds Cut Both Ways", time: "12h ago", snippet: "The article examines how interest rate hike probability estimates are creating mixed signals affecting JPMorgan's stock performance." }
     ]
   }
 };

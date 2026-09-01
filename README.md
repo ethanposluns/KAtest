@@ -1,22 +1,27 @@
 # Auto Process Notes — prototype
 
 A small front-end prototype (not connected to Pega, no backend) that shows what a case view could
-look like if it fetched its "process notes" automatically, instead of an analyst manually asking
-an assistant something like *"What are the notes for TSLA?"* every time a case is opened.
+look like if it fetched its "process notes" for you, instead of an analyst manually asking an
+assistant something like *"What are the Pre Assessment notes for TSLA?"* every time a case needs them.
 
 ## What the demo shows
 
-- A mock case queue on the left, where each case already carries a **document type** (`Summary`
-  or `News`) and a **client ID** (stock ticker) — the two fields the real workflow system already
-  attaches to every case today.
-- Selecting a case simulates the automated lookup: it shows a short "trace" of the document
-  type + client ID being matched to a notes source, then renders the notes immediately, with a
-  citation for where they came from — the same source link an analyst would otherwise have opened
-  by hand.
-- Summary-type cases render company stats and an overview; News-type cases render recent
-  headlines. Both are keyed off the ticker.
-- All case, price, and news data is hardcoded sample data in `app.js` for illustration only — there
-  is no live feed or real backend behind it.
+- A mock case queue on the left. Each case carries a **document type** (`Contribution` or
+  `Withdrawal`) and a **status** (`Pre Assessment` or `Process`) — case metadata a real workflow
+  system already attaches to every case today — plus a **client ID** (stock ticker).
+- Selecting a case opens it blank, with a single tab matching that case's status: a
+  `Pre Assessment` case only offers Pre Assessment notes, a `Process` case only offers Process
+  notes. Clicking the tab runs a short automation "trace" (client ID matched to a notes source)
+  and then renders the notes, with a citation link to where they came from — the same source an
+  analyst would otherwise have opened by hand.
+- **Pre Assessment** notes render the full Yahoo Finance Summary quote-stats table (Previous
+  Close, Day's Range, Market Cap, Beta, PE Ratio, EPS, 1y Target Est, etc.), a company overview
+  line, and a business description.
+- **Process** notes render the 3 most recent news headlines for that ticker.
+- The market stats and news content in `app.js` are a **real, fixed snapshot** pulled from
+  `finance.yahoo.com/quote/{TICKER}/` and `/news/` on **2026-09-01** — not fabricated numbers and
+  not a live feed. Re-running the same lookup today will show different, more current figures.
+  The case queue metadata itself (case IDs, statuses, submitted times) is invented sample data.
 
 ## Running locally
 
@@ -45,5 +50,5 @@ npm run preview
 ```
 index.html    Page markup
 styles.css    All styling
-app.js        Mock data + rendering/interaction logic
+app.js        Data (case queue + Yahoo Finance snapshot) + rendering/interaction logic
 ```
