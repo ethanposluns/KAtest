@@ -103,6 +103,16 @@ function typeLabel(docType) {
   return TYPE_LABELS[docType] || docType;
 }
 
+// Display labels shown to the user for each internal status value.
+var STATUS_LABELS = {
+  New: "Pre Assessment",
+  Review: "Process"
+};
+
+function statusLabel(status) {
+  return STATUS_LABELS[status] || status;
+}
+
 var ICONS = {
   summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
   news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h13a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 13h7M19 8v9a2 2 0 0 1-2 2"/></svg>',
@@ -131,7 +141,7 @@ function renderQueue() {
           'data-id="' + c.id + '" role="option" aria-selected="' + (c.id === selectedId) + '">' +
           '<span class="row-top">' +
             '<span class="case-id mono">' + c.id + '</span>' +
-            '<span class="status ' + statusClass + '">' + escapeHtml(c.status) + '</span>' +
+            '<span class="status ' + statusClass + '">' + escapeHtml(statusLabel(c.status)) + '</span>' +
           '</span>' +
           '<span class="row-mid">' +
             '<span class="ticker-chip mono">' + c.ticker + '</span>' +
