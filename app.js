@@ -77,8 +77,9 @@ var TICKERS = {
 
 // ---------------------------------------------------------------
 // Case queue. Each case already carries a document type ("Summary"
-// or "News") and a client ID (ticker) — the same two fields the
-// real workflow system separates cases by today.
+// or "News", displayed to the user as "Contribution"/"Withdrawal"
+// via TYPE_LABELS above) and a client ID (ticker) — the same two
+// fields the real workflow system separates cases by today.
 // ---------------------------------------------------------------
 var CASES = [
   { id: "CASE-20481", ticker: "AAPL", docType: "Summary", status: "New",    submitted: "Aug 25 · 9:14 AM" },
@@ -91,6 +92,16 @@ var CASES = [
   { id: "CASE-20488", ticker: "NVDA", docType: "Summary", status: "New",    submitted: "Aug 26 · 9:10 AM" },
   { id: "CASE-20489", ticker: "AAPL", docType: "News",    status: "Review", submitted: "Aug 25 · 11:45 AM" }
 ];
+
+// Display labels shown to the user for each internal docType value.
+var TYPE_LABELS = {
+  Summary: "Contribution",
+  News: "Withdrawal"
+};
+
+function typeLabel(docType) {
+  return TYPE_LABELS[docType] || docType;
+}
 
 var ICONS = {
   summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
@@ -127,7 +138,7 @@ function renderQueue() {
             '<span class="company-name">' + escapeHtml(ticker.name) + '</span>' +
           '</span>' +
           '<span class="row-bottom">' +
-            '<span class="doctype-pill">' + icon + escapeHtml(c.docType) + '</span>' +
+            '<span class="doctype-pill">' + icon + escapeHtml(typeLabel(c.docType)) + '</span>' +
             '<span class="mono">' + c.submitted + '</span>' +
           '</span>' +
         '</button>' +
@@ -144,8 +155,8 @@ function renderDetail(c) {
   var traceHtml =
     '<div class="trace">' +
       '<div class="trace-line" style="animation-delay:0ms"><span class="dot"></span>Skips manually asking: <span class="mono">&ldquo;What are the notes for ' + c.ticker + '?&rdquo;</span></div>' +
-      '<div class="trace-line" style="animation-delay:110ms"><span class="dot"></span>Document type: <span class="mono">' + escapeHtml(c.docType) + '</span> &middot; Client ID: <span class="mono">' + c.ticker + '</span></div>' +
-      '<div class="trace-line" style="animation-delay:220ms"><span class="dot"></span>Fetching Yahoo Finance ' + escapeHtml(c.docType) + ' for ' + c.ticker + '&hellip;</div>' +
+      '<div class="trace-line" style="animation-delay:110ms"><span class="dot"></span>Document type: <span class="mono">' + escapeHtml(typeLabel(c.docType)) + '</span> &middot; Client ID: <span class="mono">' + c.ticker + '</span></div>' +
+      '<div class="trace-line" style="animation-delay:220ms"><span class="dot"></span>Fetching Yahoo Finance ' + escapeHtml(typeLabel(c.docType)) + ' for ' + c.ticker + '&hellip;</div>' +
     '</div>';
 
   var bodyHtml;
@@ -162,7 +173,7 @@ function renderDetail(c) {
           );
         }).join("") +
       '</ul>' +
-      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/news/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — News for ' + c.ticker + '</a>';
+      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/news/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — ' + TYPE_LABELS.News + ' for ' + c.ticker + '</a>';
   } else {
     bodyHtml =
       '<div class="stat-grid">' +
@@ -171,7 +182,7 @@ function renderDetail(c) {
         '<div class="stat"><p class="k">Industry</p><p class="v" style="font-size:12px">' + escapeHtml(t.industry) + '</p></div>' +
       '</div>' +
       '<p class="summary-text">' + escapeHtml(t.summary) + '</p>' +
-      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — Summary for ' + c.ticker + '</a>';
+      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — ' + TYPE_LABELS.Summary + ' for ' + c.ticker + '</a>';
   }
 
   detailEl.innerHTML =
@@ -179,7 +190,7 @@ function renderDetail(c) {
       '<div>' +
         '<p class="id mono">' + c.id + '</p>' +
         '<h2><span class="ticker-chip mono">' + c.ticker + '</span>' + escapeHtml(t.name) + '</h2>' +
-        '<p class="sub"><span class="sub-icon">' + docIcon + '</span>Document type: ' + escapeHtml(c.docType) + ' &middot; Submitted ' + c.submitted + '</p>' +
+        '<p class="sub"><span class="sub-icon">' + docIcon + '</span>Document type: ' + escapeHtml(typeLabel(c.docType)) + ' &middot; Submitted ' + c.submitted + '</p>' +
       '</div>' +
       '<div class="price-block">' +
         '<p class="px mono">$' + t.price + '</p>' +
