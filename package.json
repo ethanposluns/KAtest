@@ -1,0 +1,15 @@
+{
+  "name": "case-notes-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Prototype: process notes auto-loaded into a case view instead of asked for by hand.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.2.2"
+  }
+}
