@@ -162,7 +162,7 @@ function renderDetail(c) {
           );
         }).join("") +
       '</ul>' +
-      '<div class="citation">' + ICONS.link + 'Source: Yahoo Finance — News for ' + c.ticker + '</div>';
+      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/news/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — News for ' + c.ticker + '</a>';
   } else {
     bodyHtml =
       '<div class="stat-grid">' +
@@ -171,7 +171,7 @@ function renderDetail(c) {
         '<div class="stat"><p class="k">Industry</p><p class="v" style="font-size:12px">' + escapeHtml(t.industry) + '</p></div>' +
       '</div>' +
       '<p class="summary-text">' + escapeHtml(t.summary) + '</p>' +
-      '<div class="citation">' + ICONS.link + 'Source: Yahoo Finance — Summary for ' + c.ticker + '</div>';
+      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — Summary for ' + c.ticker + '</a>';
   }
 
   detailEl.innerHTML =
