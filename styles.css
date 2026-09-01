@@ -446,6 +446,60 @@ ul.queue {
 .chg.up { color: var(--good); }
 .chg.down { color: var(--bad); }
 
+/* ---------- View picker ---------- */
+
+.view-picker {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px 0;
+}
+
+.view-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.view-tab svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.view-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.view-tab.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.view-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 50px 30px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.view-empty svg { width: 30px; height: 30px; opacity: 0.55; }
+.view-empty p { margin: 0; font-size: 13.5px; max-width: 34ch; line-height: 1.5; }
+.view-empty .lead { font-size: 14.5px; font-weight: 600; color: var(--ink-soft); }
+
 /* ---------- Automation trace ---------- */
 
 .trace {

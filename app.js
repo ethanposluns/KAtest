@@ -116,7 +116,50 @@ function statusLabel(status) {
 var ICONS = {
   summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
   news: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h13a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V5Z"/><path d="M8 9h7M8 13h7M19 8v9a2 2 0 0 1-2 2"/></svg>',
-  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 15 15 9M10 6l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 18l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg>'
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 15 15 9M10 6l1-1a3.5 3.5 0 0 1 5 5l-1 1M14 18l-1 1a3.5 3.5 0 0 1-5-5l1-1"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3h6l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>'
+};
+
+// The two note types a user can pull for a case once it's open. Each
+// is backed by data already on TICKERS, independent of the case's
+// own document type (Contribution/Withdrawal), which stays a fixed
+// piece of case metadata shown in the header.
+var VIEWS = {
+  preassessment: {
+    label: "Pre Assessment",
+    icon: ICONS.summary,
+    urlPath: "",
+    body: function (t) {
+      return (
+        '<div class="stat-grid">' +
+          '<div class="stat"><p class="k">Market Cap</p><p class="v">' + t.marketCap + '</p></div>' +
+          '<div class="stat"><p class="k">Sector</p><p class="v" style="font-size:12px">' + escapeHtml(t.sector) + '</p></div>' +
+          '<div class="stat"><p class="k">Industry</p><p class="v" style="font-size:12px">' + escapeHtml(t.industry) + '</p></div>' +
+        '</div>' +
+        '<p class="summary-text">' + escapeHtml(t.summary) + '</p>'
+      );
+    }
+  },
+  process: {
+    label: "Process",
+    icon: ICONS.news,
+    urlPath: "news/",
+    body: function (t) {
+      return (
+        '<ul class="news-list">' +
+          t.news.map(function (n) {
+            return (
+              '<li class="news-item">' +
+                '<p class="headline">' + escapeHtml(n.headline) + '</p>' +
+                '<p class="meta">Yahoo Finance &middot; ' + n.time + '</p>' +
+                '<p class="snippet">' + escapeHtml(n.snippet) + '</p>' +
+              '</li>'
+            );
+          }).join("") +
+        '</ul>'
+      );
+    }
+  }
 };
 
 function escapeHtml(str) {
@@ -128,6 +171,7 @@ function escapeHtml(str) {
 var queueEl = document.getElementById("queue");
 var detailEl = document.getElementById("detail");
 var selectedId = null;
+var selectedView = null;
 
 function renderQueue() {
   document.getElementById("queueCount").textContent = CASES.length + " open";
@@ -159,43 +203,9 @@ function renderQueue() {
 
 function renderDetail(c) {
   var t = TICKERS[c.ticker];
-  var isNews = c.docType === "News";
-  var docIcon = isNews ? ICONS.news : ICONS.summary;
+  var docIcon = c.docType === "News" ? ICONS.news : ICONS.summary;
 
-  var traceHtml =
-    '<div class="trace">' +
-      '<div class="trace-line" style="animation-delay:0ms"><span class="dot"></span>Skips manually asking: <span class="mono">&ldquo;What are the notes for ' + c.ticker + '?&rdquo;</span></div>' +
-      '<div class="trace-line" style="animation-delay:110ms"><span class="dot"></span>Document type: <span class="mono">' + escapeHtml(typeLabel(c.docType)) + '</span> &middot; Client ID: <span class="mono">' + c.ticker + '</span></div>' +
-      '<div class="trace-line" style="animation-delay:220ms"><span class="dot"></span>Fetching Yahoo Finance ' + escapeHtml(typeLabel(c.docType)) + ' for ' + c.ticker + '&hellip;</div>' +
-    '</div>';
-
-  var bodyHtml;
-  if (isNews) {
-    bodyHtml =
-      '<ul class="news-list">' +
-        t.news.map(function (n) {
-          return (
-            '<li class="news-item">' +
-              '<p class="headline">' + escapeHtml(n.headline) + '</p>' +
-              '<p class="meta">Yahoo Finance &middot; ' + n.time + '</p>' +
-              '<p class="snippet">' + escapeHtml(n.snippet) + '</p>' +
-            '</li>'
-          );
-        }).join("") +
-      '</ul>' +
-      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/news/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — ' + TYPE_LABELS.News + ' for ' + c.ticker + '</a>';
-  } else {
-    bodyHtml =
-      '<div class="stat-grid">' +
-        '<div class="stat"><p class="k">Market Cap</p><p class="v">' + t.marketCap + '</p></div>' +
-        '<div class="stat"><p class="k">Sector</p><p class="v" style="font-size:12px">' + escapeHtml(t.sector) + '</p></div>' +
-        '<div class="stat"><p class="k">Industry</p><p class="v" style="font-size:12px">' + escapeHtml(t.industry) + '</p></div>' +
-      '</div>' +
-      '<p class="summary-text">' + escapeHtml(t.summary) + '</p>' +
-      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Source: Yahoo Finance — ' + TYPE_LABELS.Summary + ' for ' + c.ticker + '</a>';
-  }
-
-  detailEl.innerHTML =
+  var headHtml =
     '<div class="detail-head">' +
       '<div>' +
         '<p class="id mono">' + c.id + '</p>' +
@@ -206,13 +216,50 @@ function renderDetail(c) {
         '<p class="px mono">$' + t.price + '</p>' +
         '<p class="chg mono ' + (t.up ? "up" : "down") + '">' + t.change + ' (' + t.changePct + ')</p>' +
       '</div>' +
-    '</div>' +
-    traceHtml +
-    '<div class="content content-in" style="animation-delay:300ms">' + bodyHtml + '</div>';
+    '</div>';
+
+  var pickerHtml =
+    '<div class="view-picker">' +
+      Object.keys(VIEWS).map(function (key) {
+        var view = VIEWS[key];
+        return (
+          '<button type="button" class="view-tab' + (selectedView === key ? " is-active" : "") + '" data-view="' + key + '">' +
+            view.icon + escapeHtml(view.label) +
+          '</button>'
+        );
+      }).join("") +
+    '</div>';
+
+  var lowerHtml;
+  if (!selectedView) {
+    lowerHtml =
+      '<div class="view-empty">' + ICONS.doc +
+        '<p class="lead">No notes pulled yet</p>' +
+        '<p>Choose Pre Assessment or Process above to fetch this case&rsquo;s notes.</p>' +
+      '</div>';
+  } else {
+    var view = VIEWS[selectedView];
+    var traceHtml =
+      '<div class="trace">' +
+        '<div class="trace-line" style="animation-delay:0ms"><span class="dot"></span>Skips manually asking: <span class="mono">&ldquo;What are the ' + escapeHtml(view.label) + ' notes for ' + c.ticker + '?&rdquo;</span></div>' +
+        '<div class="trace-line" style="animation-delay:110ms"><span class="dot"></span>Notes type: <span class="mono">' + escapeHtml(view.label) + '</span> &middot; Client ID: <span class="mono">' + c.ticker + '</span></div>' +
+        '<div class="trace-line" style="animation-delay:220ms"><span class="dot"></span>Fetching Yahoo Finance ' + escapeHtml(view.label) + ' for ' + c.ticker + '&hellip;</div>' +
+      '</div>';
+    var citationHtml =
+      '<a class="citation" href="https://finance.yahoo.com/quote/' + c.ticker + '/' + view.urlPath + '" target="_blank" rel="noopener noreferrer">' +
+        ICONS.link + 'Source: Yahoo Finance — ' + escapeHtml(view.label) + ' for ' + c.ticker +
+      '</a>';
+    lowerHtml =
+      traceHtml +
+      '<div class="content content-in" style="animation-delay:300ms">' + view.body(t) + citationHtml + '</div>';
+  }
+
+  detailEl.innerHTML = headHtml + pickerHtml + lowerHtml;
 }
 
 function selectCase(id) {
   selectedId = id;
+  selectedView = null;
   renderQueue();
   var c = CASES.filter(function (x) { return x.id === id; })[0];
   if (c) renderDetail(c);
@@ -221,6 +268,14 @@ function selectCase(id) {
 queueEl.addEventListener("click", function (e) {
   var btn = e.target.closest(".case-row");
   if (btn) selectCase(btn.getAttribute("data-id"));
+});
+
+detailEl.addEventListener("click", function (e) {
+  var btn = e.target.closest(".view-tab");
+  if (!btn) return;
+  selectedView = btn.getAttribute("data-view");
+  var c = CASES.filter(function (x) { return x.id === selectedId; })[0];
+  if (c) renderDetail(c);
 });
 
 renderQueue();
