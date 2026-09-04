@@ -14,36 +14,18 @@ assistant something like *"What are the Pre Assessment notes for TSLA?"* every t
   notes. Clicking the tab runs a short automation "trace" (client ID matched to a notes source)
   and then renders the notes, with a citation link to where they came from — the same source an
   analyst would otherwise have opened by hand.
-- **Pre Assessment** notes render a live price/change/market-cap/sector-industry card plus a
-  company description.
-- **Process** notes render the 3 most recent news headlines for that ticker from the last 7 days.
-- Market stats and news are fetched **live from the [Finnhub](https://finnhub.io) API** at the
-  moment a case is opened, via the `netlify/functions/case-data.js` serverless function — not
-  fabricated numbers and not a fixed snapshot. The case queue metadata itself (case IDs, statuses,
-  submitted times) is invented sample data; only the ticker symbols in it are real.
-- If the Finnhub request fails (bad ticker, rate limit, missing API key), the case view shows a
-  friendly inline error instead of breaking the page.
-
-## Live data: Finnhub API key
-
-The case view fetches real market data and news from [Finnhub](https://finnhub.io) through the
-`netlify/functions/case-data.js` serverless function, which keeps the API key server-side.
-
-- **On the deployed (Netlify) site**, set a `FINNHUB_API_KEY` environment variable in the site's
-  Netlify dashboard under **Site configuration → Environment variables**. Without it, the function
-  returns a 500 error and the case view shows a friendly inline error message.
-- **For local testing**, plain `npm run dev` (Vite alone) cannot run the Netlify serverless
-  function, so case data fetches will fail. Use the [Netlify CLI](https://docs.netlify.com/cli/get-started/)
-  instead:
-
-  ```bash
-  npm install -g netlify-cli   # if you don't have it yet
-  netlify dev
-  ```
-
-  `netlify dev` runs Vite and serves `netlify/functions/case-data.js` together behind one local
-  URL. Set `FINNHUB_API_KEY` in a local `.env` file (untracked) or via `netlify env:set` before
-  running it.
+- **Pre Assessment** notes render a company's [Wikipedia](https://www.wikipedia.org/) summary —
+  its thumbnail (if one exists), short description, and opening extract.
+- **Process** notes render the top 3 [Hacker News](https://news.ycombinator.com/) stories matching
+  the company name, via the [Algolia HN Search API](https://hn.algolia.com/api) — title, points,
+  and a link.
+- Both are fetched **live, directly from the browser**, at the moment a case is opened — not
+  fabricated data and not a fixed snapshot. Neither API requires a key: both are free, public, and
+  CORS-enabled, so `app.js` calls them straight with `fetch()`, no backend involved. The case queue
+  metadata itself (case IDs, statuses, submitted times) is invented sample data; only the company
+  names looked up are real.
+- If a lookup fails (company not found on Wikipedia, no matching Hacker News stories, network
+  error), the case view shows a friendly inline error instead of breaking the page.
 
 ## Running locally
 
@@ -53,8 +35,8 @@ npm run dev
 ```
 
 This starts a local Vite dev server (with hot reload) and prints a URL to open in your browser.
-Note: this alone won't serve `/.netlify/functions/case-data`, so case data fetches will fail — see
-[Live data: Finnhub API key](#live-data-finnhub-api-key) above for `netlify dev` instead.
+Since there's no API key to keep server-side and no serverless function involved, plain
+`npm run dev` is all you need — there's nothing else to configure.
 
 ## Building for deployment
 
@@ -69,85 +51,82 @@ with:
 npm run preview
 ```
 
-## Integration guide: swapping Finnhub for a real internal system
+Because everything runs client-side, the output in `dist/` can be hosted on any static file host
+(Netlify, S3, GitHub Pages, etc.) with no server-side configuration.
 
-This prototype is built so that **all** external data access goes through one file:
-`netlify/functions/case-data.js`. Everything else — `app.js`, the queue, the trace animation, the
-card/news-list markup — talks only to that one function and doesn't know or care that Finnhub is
-behind it. Adapting this to a real workflow system means replacing what's inside that function,
-not how it's called.
+## Integration guide: swapping in real internal systems
 
-**1. The integration point.** `case-data.js` receives two query params, `ticker` (client ID) and
-`type` (`summary` or `news`), and returns JSON. Today it maps those into two Finnhub calls
-(`quote`/`stock/profile2` for `summary`, `company-news` for `news`). To point this at an internal
-system instead, keep the same function signature — accept a client ID and a notes type, fetch from
-a source, return JSON in the shape below — and swap the Finnhub `fetch()` calls for calls to the
-internal process-notes link (or whatever internal API serves that case's notes). `app.js` would
-need no changes as long as the response shape stays the same.
+This prototype is built so that **all** external data access goes through two functions in
+`app.js`: `fetchWikipediaSummary(name)` and `fetchHNStories(name)`. Everything else — the queue,
+the trace animation, the card/news-list markup — only calls those two functions and doesn't know
+or care that Wikipedia and Hacker News are behind them. Adapting this to a real workflow system
+means replacing what's inside those two functions, not how they're called.
+
+**1. The integration points.** Both functions take a company name (or, in a real system, whatever
+identifier — client ID, ticker — the case carries) and return a promise that resolves to the JSON
+shape below. Today they call Wikipedia's REST API and the HN Algolia search API directly from the
+browser. To point this at an internal system instead, keep the same function signatures — accept
+an identifier, fetch from a source, resolve to JSON in the shape below — and swap the `fetch()`
+call for one against the internal process-notes link (or whatever internal API serves that case's
+notes). `VIEWS.preassessment.body()` / `VIEWS.process.body()` and the rest of `app.js` would need
+no changes as long as the resolved shape stays the same.
 
 **2. Response shape `app.js` expects.**
 
-For `type=summary`, `VIEWS.preassessment.body()` (in `app.js`) reads:
+`fetchWikipediaSummary()` should resolve to what `VIEWS.preassessment.body()` reads:
 
 ```json
 {
-  "name": "Apple Inc.",
-  "price": 315.42,
-  "change": -4.28,
-  "changePercent": -1.34,
-  "marketCap": "4.62T",
-  "industry": "Consumer Electronics",
-  "description": "Apple Inc. is listed on NASDAQ and operates in the Consumer Electronics industry."
+  "title": "Apple Inc.",
+  "description": "American multinational technology company",
+  "extract": "Apple Inc. is an American multinational technology company headquartered in Cupertino, California...",
+  "thumbnail": { "source": "https://example.com/thumb.png" }
 }
 ```
 
-`price`/`change`/`changePercent` are numbers (or `null`); everything else is a display string.
-Missing/`null` fields render as `--` rather than breaking the page.
+`description` and `thumbnail` are optional — omit or set to `null`/`undefined` and they're simply
+not rendered. `extract` is the body text shown; missing it renders a "No summary available"
+fallback rather than breaking the page.
 
-For `type=news`, `VIEWS.process.body()` reads:
+`fetchHNStories()` should resolve to what `VIEWS.process.body()` reads:
 
 ```json
 {
   "articles": [
-    {
-      "headline": "Headline text",
-      "source": "Publisher name",
-      "datetime": 1750000000,
-      "summary": "One or two sentence summary."
-    }
+    { "title": "Headline text", "points": 42, "url": "https://example.com/article", "objectID": "12345" }
   ]
 }
 ```
 
-`articles` is an array (up to 3 are rendered); `datetime` is a Unix timestamp in seconds.
+`articles` is an array (up to 3 are rendered). If `url` is empty, the headline links to
+`https://news.ycombinator.com/item?id=<objectID>` instead — an internal integration returning its
+own article/discussion links wouldn't need `objectID` at all, just a non-empty `url` per item.
 
-On failure, the function should return a non-2xx status with `{"error": "human-readable message"}`
-— `app.js` surfaces that string directly in the inline error box, so keep it end-user-friendly.
+On failure, throw an `Error` with a human-readable `message` — `ensureCaseData()` in `app.js`
+catches it and puts that message straight into the inline error box, so keep it end-user-friendly
+(see the existing `throw new Error(...)` calls in both fetch functions for the pattern).
 
-**3. Authentication.** Right now `case-data.js` reads a single secret, `FINNHUB_API_KEY`, from
-`process.env` and passes it as a query-string token — appropriate for a public third-party API
-with a static key. A real internal system almost certainly needs something different: an SSO/OAuth
-token minted per request, an internal API key with its own header scheme, mTLS, or an endpoint
-only reachable from inside a VPN or private network Netlify's functions can't reach directly (which
-would instead push this toward a backend-for-frontend or an internal gateway the function calls
-out to). Whatever the real auth model is, it replaces the `token` query param and the
-`FINNHUB_API_KEY` env var — the rest of the function (parse params, fetch, shape JSON, handle
-errors) stays structurally the same.
+**3. Authentication.** Wikipedia and the HN Algolia API are public and keyless, so today there's no
+auth at all — `fetch()` is called directly from the browser with nothing to hide. A real internal
+system almost certainly needs something: an SSO/OAuth token, an internal API key, or an endpoint
+only reachable from inside a VPN or private network (which a browser can't reach directly — that
+case would need routing the request through a small backend/proxy the browser *can* reach, unlike
+today's fully client-side setup). Whatever the real auth model is, it lives inside
+`fetchWikipediaSummary()`/`fetchHNStories()` (or their real-system replacements); the rest of the
+app doesn't need to know about it.
 
 **4. What this is (and isn't).** This is a proof of concept demonstrating one interaction pattern —
 click a case, auto-fetch its notes, render them inline with a loading state and a citation — so a
 real system's UX can be prototyped against it before wiring up production infrastructure. It is
-**not** production-ready: there's no response caching, no retry/backoff on transient failures, no
-timeout handling beyond what `fetch` does by default, no structured logging or error monitoring,
-and no rate limiting of outbound calls. All of that would need to be added before this pattern
-carries real traffic.
+**not** production-ready: there's no response caching beyond the in-memory per-session cache, no
+retry/backoff on transient failures, no timeout handling beyond what `fetch` does by default, no
+structured logging or error monitoring, and no rate limiting of outbound calls. All of that would
+need to be added before this pattern carries real traffic.
 
 ## Project structure
 
 ```
-index.html                          Page markup
-styles.css                          All styling
-app.js                              Case queue data + rendering/interaction/fetch logic
-netlify/functions/case-data.js      Serverless proxy to the Finnhub API
-netlify.toml                        Netlify build/dev config (functions directory, etc.)
+index.html    Page markup
+styles.css    All styling
+app.js        Case queue data + rendering/interaction/fetch logic
 ```

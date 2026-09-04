@@ -2,10 +2,10 @@
 
 // ---------------------------------------------------------------
 // Client-facing names for the queue list and case header, keyed by
-// client ID (ticker). Everything else — price, market cap, sector/
-// industry, description, and news — is fetched live from Finnhub
-// (via the case-data Netlify function) when a case is opened, instead
-// of an analyst finding and pasting it into the assistant by hand.
+// client ID (ticker). Everything else — the Wikipedia summary and
+// the Hacker News stories — is fetched live, directly from those
+// public APIs, when a case is opened, instead of an analyst finding
+// and pasting it into the assistant by hand.
 // ---------------------------------------------------------------
 var TICKER_NAMES = {
   AAPL: "Apple Inc.",
@@ -75,7 +75,7 @@ var ICONS = {
 };
 
 // The two note types a user can pull for a case once it's open. Each
-// renders the live payload fetched from the case-data function, keyed
+// renders the live payload fetched straight from a public API, keyed
 // by case status — independent of the case's own document type
 // (Contribution/Withdrawal), which stays a fixed piece of case
 // metadata shown in the header.
@@ -84,26 +84,16 @@ var VIEWS = {
     label: "Pre Assessment",
     icon: ICONS.summary,
     body: function (data) {
-      var hasChange = typeof data.change === "number";
-      var changeClass = hasChange ? (data.change >= 0 ? "up" : "down") : "";
-      var changeText = hasChange
-        ? (data.change >= 0 ? "+" : "") + data.change.toFixed(2) +
-          (typeof data.changePercent === "number" ? " (" + (data.changePercent >= 0 ? "+" : "") + data.changePercent.toFixed(2) + "%)" : "")
-        : "--";
+      var thumbHtml = data.thumbnail && data.thumbnail.source
+        ? '<img class="wiki-thumb" src="' + escapeHtml(data.thumbnail.source) + '" alt="' + escapeHtml(data.title || "") + '" />'
+        : "";
       return (
-        '<div class="stats-table">' +
-          '<div class="stats-row">' +
-            '<div class="stats-cell"><span class="k">Price</span><span class="v mono">' +
-              (typeof data.price === "number" ? "$" + data.price.toFixed(2) : "--") + '</span></div>' +
-            '<div class="stats-cell"><span class="k">Change</span><span class="v mono ' + changeClass + '">' + escapeHtml(changeText) + '</span></div>' +
-            '<div class="stats-cell"><span class="k">Market Cap</span><span class="v mono">' + escapeHtml(data.marketCap || "--") + '</span></div>' +
-            '<div class="stats-cell"><span class="k">Sector / Industry</span><span class="v mono">' + escapeHtml(data.industry || "--") + '</span></div>' +
-          '</div>' +
-        '</div>' +
+        thumbHtml +
         '<div class="overview-line">' + ICONS.chevron +
-          '<strong>' + escapeHtml(data.name) + ' Overview</strong>' +
+          '<strong>' + escapeHtml(data.title || "") + '</strong>' +
+          (data.description ? ' &mdash; ' + escapeHtml(data.description) : "") +
         '</div>' +
-        '<p class="summary-text">' + escapeHtml(data.description || "No description available.") + '</p>'
+        '<p class="summary-text">' + escapeHtml(data.extract || "No summary available.") + '</p>'
       );
     }
   },
@@ -112,17 +102,15 @@ var VIEWS = {
     icon: ICONS.news,
     body: function (data) {
       var articles = (data && data.articles) || [];
-      if (!articles.length) {
-        return '<p class="summary-text">No recent news found for this ticker in the last 7 days.</p>';
-      }
       return (
         '<ul class="news-list">' +
-          articles.map(function (n) {
+          articles.map(function (a) {
+            var link = a.url || "https://news.ycombinator.com/item?id=" + a.objectID;
             return (
               '<li class="news-item">' +
-                '<p class="headline">' + escapeHtml(n.headline || "(untitled)") + '</p>' +
-                '<p class="meta">' + escapeHtml(n.source || "Finnhub") + ' &middot; ' + formatNewsDate(n.datetime) + '</p>' +
-                '<p class="snippet">' + escapeHtml(n.summary || "") + '</p>' +
+                '<p class="headline"><a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' +
+                  escapeHtml(a.title || "(untitled)") + '</a></p>' +
+                '<p class="meta">' + (typeof a.points === "number" ? a.points + " points" : "--") + ' &middot; Hacker News</p>' +
               '</li>'
             );
           }).join("") +
@@ -138,28 +126,51 @@ function escapeHtml(str) {
   });
 }
 
-function formatNewsDate(unixSeconds) {
-  if (!unixSeconds) return "";
-  var d = new Date(unixSeconds * 1000);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+// Wikipedia article titles use underscores for spaces; everything else
+// (commas, periods, ampersands) is percent-encoded.
+function wikipediaTitle(name) {
+  return encodeURIComponent(name.trim().replace(/\s+/g, "_"));
 }
 
-function fetchCaseData(ticker, type) {
-  var url = "/.netlify/functions/case-data?ticker=" + encodeURIComponent(ticker) + "&type=" + encodeURIComponent(type);
+function fetchWikipediaSummary(name) {
+  var url = "https://en.wikipedia.org/api/rest_v1/page/summary/" + wikipediaTitle(name);
   return fetch(url)
     .catch(function () {
-      throw new Error("Couldn't reach the data service. Check your connection and try again.");
+      throw new Error("Couldn't reach Wikipedia. Check your connection and try again.");
     })
     .then(function (res) {
-      return res
-        .json()
-        .catch(function () { return {}; })
-        .then(function (body) {
-          if (!res.ok) {
-            throw new Error((body && body.error) || ("Request failed with status " + res.status + "."));
-          }
-          return body;
-        });
+      if (res.status === 404) {
+        throw new Error('No Wikipedia page found for "' + name + '".');
+      }
+      if (!res.ok) {
+        throw new Error("Wikipedia lookup failed (status " + res.status + ").");
+      }
+      return res.json();
+    });
+}
+
+function fetchHNStories(name) {
+  var url = "https://hn.algolia.com/api/v1/search?query=" + encodeURIComponent(name) + "&tags=story";
+  return fetch(url)
+    .catch(function () {
+      throw new Error("Couldn't reach Hacker News. Check your connection and try again.");
+    })
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("Hacker News search failed (status " + res.status + ").");
+      }
+      return res.json();
+    })
+    .then(function (body) {
+      var hits = (body && body.hits) || [];
+      if (!hits.length) {
+        throw new Error('No Hacker News stories found for "' + name + '".');
+      }
+      return {
+        articles: hits.slice(0, 3).map(function (h) {
+          return { title: h.title, points: h.points, url: h.url, objectID: h.objectID };
+        })
+      };
     });
 }
 
@@ -167,8 +178,8 @@ var queueEl = document.getElementById("queue");
 var detailEl = document.getElementById("detail");
 var selectedId = null;
 var selectedView = null;
-// Cache of fetched case-data responses, keyed by "<caseId>:<view>", so
-// re-selecting an already-loaded view doesn't refetch it.
+// Cache of fetched Wikipedia/HN responses, keyed by "<caseId>:<view>",
+// so re-selecting an already-loaded view doesn't refetch it.
 var caseDataCache = {};
 
 function renderQueue() {
@@ -209,10 +220,17 @@ function traceHtml(view, ticker, statusLine) {
   );
 }
 
-function citationHtml(view, ticker) {
+function sourceName(viewKey) {
+  return viewKey === "preassessment" ? "Wikipedia" : "Hacker News";
+}
+
+function citationHtml(viewKey, name) {
+  var href = viewKey === "preassessment"
+    ? "https://en.wikipedia.org/wiki/" + wikipediaTitle(name)
+    : "https://hn.algolia.com/?q=" + encodeURIComponent(name) + "&type=story";
   return (
-    '<a class="citation" href="https://finnhub.io/quote/' + ticker + '" target="_blank" rel="noopener noreferrer">' +
-      ICONS.link + 'Source: Finnhub — ' + escapeHtml(view.label) + ' for ' + ticker +
+    '<a class="citation" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' +
+      ICONS.link + 'Source: ' + escapeHtml(sourceName(viewKey)) +
     '</a>'
   );
 }
@@ -250,19 +268,20 @@ function renderDetail(c) {
     var view = VIEWS[selectedView];
     var key = c.id + ":" + selectedView;
     var entry = caseDataCache[key] || { status: "loading" };
+    var source = sourceName(selectedView);
 
     if (entry.status === "error") {
       lowerHtml =
-        traceHtml(view, c.ticker, 'Finnhub ' + escapeHtml(view.label) + ' lookup for ' + c.ticker + ' failed.') +
+        traceHtml(view, c.ticker, escapeHtml(source) + ' lookup for ' + c.ticker + ' failed.') +
         '<div class="content content-in" style="animation-delay:80ms">' +
           '<div class="error-box">' + ICONS.doc + '<span>' + escapeHtml(entry.message) + '</span></div>' +
         '</div>';
     } else if (entry.status === "ready") {
       lowerHtml =
-        traceHtml(view, c.ticker, 'Fetched Finnhub ' + escapeHtml(view.label) + ' for ' + c.ticker + '.') +
-        '<div class="content content-in" style="animation-delay:80ms">' + view.body(entry.data) + citationHtml(view, c.ticker) + '</div>';
+        traceHtml(view, c.ticker, 'Fetched ' + escapeHtml(source) + ' for ' + c.ticker + '.') +
+        '<div class="content content-in" style="animation-delay:80ms">' + view.body(entry.data) + citationHtml(selectedView, name) + '</div>';
     } else {
-      lowerHtml = traceHtml(view, c.ticker, 'Fetching Finnhub ' + escapeHtml(view.label) + ' for ' + c.ticker + '&hellip;');
+      lowerHtml = traceHtml(view, c.ticker, 'Fetching ' + escapeHtml(source) + ' for ' + c.ticker + '&hellip;');
     }
   }
 
@@ -275,8 +294,9 @@ function ensureCaseData(c, view) {
   if (entry && (entry.status === "ready" || entry.status === "loading")) return;
 
   caseDataCache[key] = { status: "loading" };
-  var type = view === "preassessment" ? "summary" : "news";
-  fetchCaseData(c.ticker, type)
+  var name = TICKER_NAMES[c.ticker] || c.ticker;
+  var request = view === "preassessment" ? fetchWikipediaSummary(name) : fetchHNStories(name);
+  request
     .then(function (data) {
       caseDataCache[key] = { status: "ready", data: data };
       if (selectedId === c.id && selectedView === view) renderDetail(c);
