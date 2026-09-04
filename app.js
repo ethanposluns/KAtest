@@ -54,16 +54,17 @@ function statusLabel(status) {
   return STATUS_LABELS[status] || status;
 }
 
-// Which of the two note views a case's status allows. A case in
-// "Pre Assessment" only ever offers Pre Assessment notes; a case in
-// "Process" only ever offers Process notes.
-var STATUS_VIEW = {
-  New: "preassessment",
-  Review: "process"
+// Which of the two note views a case's document type maps to. A
+// "Contribution" case always pulls its Wikipedia summary; a
+// "Withdrawal" case always pulls its Hacker News discussion. The
+// case's stage (Pre Assessment vs. Process) has no bearing on this.
+var DOCTYPE_VIEW = {
+  Summary: "preassessment",
+  News: "process"
 };
 
-function viewForStatus(status) {
-  return STATUS_VIEW[status] || "preassessment";
+function viewForDocType(docType) {
+  return DOCTYPE_VIEW[docType] || "preassessment";
 }
 
 var ICONS = {
@@ -76,9 +77,9 @@ var ICONS = {
 
 // The two note types a user can pull for a case once it's open. Each
 // renders the live payload fetched straight from a public API, keyed
-// by case status — independent of the case's own document type
-// (Contribution/Withdrawal), which stays a fixed piece of case
-// metadata shown in the header.
+// by the case's document type (Contribution/Withdrawal) — independent
+// of the case's stage (Pre Assessment/Process), which stays a fixed,
+// purely descriptive piece of case metadata shown in the queue.
 var VIEWS = {
   preassessment: {
     label: "Pre Assessment",
@@ -238,7 +239,7 @@ function citationHtml(viewKey, name) {
 function renderDetail(c) {
   var name = TICKER_NAMES[c.ticker] || c.ticker;
   var docIcon = c.docType === "News" ? ICONS.news : ICONS.summary;
-  var allowedKey = viewForStatus(c.status);
+  var allowedKey = viewForDocType(c.docType);
   var allowedView = VIEWS[allowedKey];
 
   var headHtml =

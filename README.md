@@ -8,12 +8,15 @@ assistant something like *"What are the Pre Assessment notes for TSLA?"* every t
 
 - A mock case queue on the left. Each case carries a **document type** (`Contribution` or
   `Withdrawal`) and a **status** (`Pre Assessment` or `Process`) — case metadata a real workflow
-  system already attaches to every case today — plus a **client ID** (stock ticker).
-- Selecting a case opens it blank, with a single tab matching that case's status: a
-  `Pre Assessment` case only offers Pre Assessment notes, a `Process` case only offers Process
-  notes. Clicking the tab runs a short automation "trace" (client ID matched to a notes source)
-  and then renders the notes, with a citation link to where they came from — the same source an
-  analyst would otherwise have opened by hand.
+  system already attaches to every case today — plus a **client ID** (stock ticker). Document type
+  is what determines the notes source below; status is just the case's descriptive stage and has
+  no bearing on that.
+- Selecting a case opens it blank, with a single tab matching that case's **document type**: a
+  `Contribution` case only offers the Pre Assessment (Wikipedia) tab, a `Withdrawal` case only
+  offers the Process (Hacker News) tab — regardless of the case's status. Clicking the tab runs a
+  short automation "trace" (client ID matched to a notes source) and then renders the notes, with
+  a citation link to where they came from — the same source an analyst would otherwise have opened
+  by hand.
 - **Pre Assessment** notes render a company's [Wikipedia](https://www.wikipedia.org/) summary —
   its thumbnail (if one exists), short description, and opening extract.
 - **Process** notes render the top 3 [Hacker News](https://news.ycombinator.com/) stories matching
