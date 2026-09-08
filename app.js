@@ -241,6 +241,9 @@ function renderDetail(c) {
   var docIcon = c.docType === "News" ? ICONS.news : ICONS.summary;
   var allowedKey = viewForDocType(c.docType);
   var allowedView = VIEWS[allowedKey];
+  // Display label only — must mirror the queue badge (statusLabel(c.status)),
+  // not the docType-driven view/source routing above.
+  var stageLabel = statusLabel(c.status);
 
   var headHtml =
     '<div class="detail-head">' +
@@ -254,7 +257,7 @@ function renderDetail(c) {
   var pickerHtml =
     '<div class="view-picker">' +
       '<button type="button" class="view-tab' + (selectedView === allowedKey ? " is-active" : "") + '" data-view="' + allowedKey + '">' +
-        allowedView.icon + escapeHtml(allowedView.label) +
+        allowedView.icon + escapeHtml(stageLabel) +
       '</button>' +
     '</div>';
 
@@ -263,7 +266,7 @@ function renderDetail(c) {
     lowerHtml =
       '<div class="view-empty">' + ICONS.doc +
         '<p class="lead">No notes pulled yet</p>' +
-        '<p>Choose <strong>' + escapeHtml(allowedView.label) + '</strong> above to fetch this case&rsquo;s notes.</p>' +
+        '<p>Choose <strong>' + escapeHtml(stageLabel) + '</strong> above to fetch this case&rsquo;s notes.</p>' +
       '</div>';
   } else {
     var view = VIEWS[selectedView];
