@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------
 // Client-facing names for the queue list and case header, keyed by
 // client ID (ticker). Everything else — the Wikipedia summary and
-// the Hacker News stories — is fetched live, directly from those
+// the Wikidata profile — is fetched live, directly from those
 // public APIs, when a case is opened, instead of an analyst finding
 // and pasting it into the assistant by hand.
 // ---------------------------------------------------------------
@@ -56,7 +56,7 @@ function statusLabel(status) {
 
 // Which of the two note views a case's document type maps to. A
 // "Contribution" case always pulls its Wikipedia summary; a
-// "Withdrawal" case always pulls its Hacker News discussion. The
+// "Withdrawal" case always pulls its Wikidata profile. The
 // case's stage (Pre Assessment vs. Process) has no bearing on this.
 var DOCTYPE_VIEW = {
   Summary: "preassessment",
@@ -102,20 +102,27 @@ var VIEWS = {
     label: "Process",
     icon: ICONS.news,
     body: function (data) {
-      var articles = (data && data.articles) || [];
+      var facts = (data && data.facts) || [];
       return (
-        '<ul class="news-list">' +
-          articles.map(function (a) {
-            var link = a.url || "https://news.ycombinator.com/item?id=" + a.objectID;
-            return (
-              '<li class="news-item">' +
-                '<p class="headline"><a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' +
-                  escapeHtml(a.title || "(untitled)") + '</a></p>' +
-                '<p class="meta">' + (typeof a.points === "number" ? a.points + " points" : "--") + ' &middot; Hacker News</p>' +
-              '</li>'
-            );
-          }).join("") +
-        '</ul>'
+        '<div class="overview-line">' + ICONS.chevron +
+          '<strong>' + escapeHtml((data && data.label) || "") + '</strong>' +
+          ((data && data.description) ? ' &mdash; ' + escapeHtml(data.description) : "") +
+        '</div>' +
+        (facts.length
+          ? '<ul class="news-list">' +
+              facts.map(function (f) {
+                var valueHtml = f.href
+                  ? '<a href="' + escapeHtml(f.href) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(f.value) + '</a>'
+                  : escapeHtml(f.value);
+                return (
+                  '<li class="news-item">' +
+                    '<p class="meta">' + escapeHtml(f.label) + '</p>' +
+                    '<p class="headline">' + valueHtml + '</p>' +
+                  '</li>'
+                );
+              }).join("") +
+            '</ul>'
+          : '<p class="summary-text">No additional facts available.</p>')
       );
     }
   }
@@ -150,36 +157,99 @@ function fetchWikipediaSummary(name) {
     });
 }
 
-function fetchHNStories(name) {
-  var url = "https://hn.algolia.com/api/v1/search?query=" + encodeURIComponent(name) + "&tags=story";
+// Finds a company's Wikidata entity (Q-ID) by name. origin=* is required —
+// it's what tells Wikidata's API to send CORS headers for a browser fetch.
+function fetchWikidataQid(name) {
+  var url = "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" +
+    encodeURIComponent(name) + "&language=en&format=json&origin=*&type=item&limit=1";
   return fetch(url)
     .catch(function () {
-      throw new Error("Couldn't reach Hacker News. Check your connection and try again.");
+      throw new Error("Couldn't reach Wikidata. Check your connection and try again.");
     })
     .then(function (res) {
       if (!res.ok) {
-        throw new Error("Hacker News search failed (status " + res.status + ").");
+        throw new Error("Wikidata search failed (status " + res.status + ").");
       }
       return res.json();
     })
     .then(function (body) {
-      var hits = (body && body.hits) || [];
+      var hits = (body && body.search) || [];
       if (!hits.length) {
-        throw new Error('No Hacker News stories found for "' + name + '".');
+        throw new Error('No Wikidata entry found for "' + name + '".');
       }
-      return {
-        articles: hits.slice(0, 3).map(function (h) {
-          return { title: h.title, points: h.points, url: h.url, objectID: h.objectID };
-        })
-      };
+      return hits[0].id;
     });
+}
+
+function fetchWikidataEntity(qid) {
+  var url = "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json";
+  return fetch(url)
+    .catch(function () {
+      throw new Error("Couldn't reach Wikidata. Check your connection and try again.");
+    })
+    .then(function (res) {
+      if (!res.ok) {
+        throw new Error("Wikidata entity lookup failed (status " + res.status + ").");
+      }
+      return res.json();
+    })
+    .then(function (body) {
+      var entity = body && body.entities && body.entities[qid];
+      if (!entity) {
+        throw new Error("Wikidata entity data was empty for " + qid + ".");
+      }
+      return entity;
+    });
+}
+
+// Pulls a claim's plain value (no second lookup needed) for one property,
+// e.g. claims.P571[0].mainsnak.datavalue.value.
+function claimValue(entity, prop) {
+  var claim = entity.claims && entity.claims[prop] && entity.claims[prop][0];
+  return claim && claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.value;
+}
+
+function formatWikidataDate(time) {
+  return String(time).replace(/^\+/, "").split("T")[0];
+}
+
+function formatWikidataAmount(amount) {
+  var num = Number(String(amount).replace(/^\+/, ""));
+  return isNaN(num) ? String(amount).replace(/^\+/, "") : num.toLocaleString("en-US");
+}
+
+function buildWikidataFacts(entity) {
+  var facts = [];
+  var inception = claimValue(entity, "P571");
+  if (inception && inception.time) {
+    facts.push({ label: "Founded", value: formatWikidataDate(inception.time) });
+  }
+  var website = claimValue(entity, "P856");
+  if (website) {
+    facts.push({ label: "Website", value: website, href: website });
+  }
+  var employees = claimValue(entity, "P1128");
+  if (employees && employees.amount) {
+    facts.push({ label: "Employees", value: formatWikidataAmount(employees.amount) });
+  }
+  return facts;
+}
+
+function fetchWikidataProfile(name) {
+  return fetchWikidataQid(name).then(function (qid) {
+    return fetchWikidataEntity(qid).then(function (entity) {
+      var label = (entity.labels && entity.labels.en && entity.labels.en.value) || name;
+      var description = (entity.descriptions && entity.descriptions.en && entity.descriptions.en.value) || "";
+      return { qid: qid, label: label, description: description, facts: buildWikidataFacts(entity) };
+    });
+  });
 }
 
 var queueEl = document.getElementById("queue");
 var detailEl = document.getElementById("detail");
 var selectedId = null;
 var selectedView = null;
-// Cache of fetched Wikipedia/HN responses, keyed by "<caseId>:<view>",
+// Cache of fetched Wikipedia/Wikidata responses, keyed by "<caseId>:<view>",
 // so re-selecting an already-loaded view doesn't refetch it.
 var caseDataCache = {};
 
@@ -222,16 +292,24 @@ function traceHtml(view, ticker, statusLine) {
 }
 
 function sourceName(viewKey) {
-  return viewKey === "preassessment" ? "Wikipedia" : "Hacker News";
+  return viewKey === "preassessment" ? "Wikipedia" : "Wikidata";
 }
 
-function citationHtml(viewKey, name) {
-  var href = viewKey === "preassessment"
-    ? "https://en.wikipedia.org/wiki/" + wikipediaTitle(name)
-    : "https://hn.algolia.com/?q=" + encodeURIComponent(name) + "&type=story";
+function citationHtml(viewKey, name, data) {
+  if (viewKey === "preassessment") {
+    var wikiHref = "https://en.wikipedia.org/wiki/" + wikipediaTitle(name);
+    return (
+      '<a class="citation" href="' + escapeHtml(wikiHref) + '" target="_blank" rel="noopener noreferrer">' +
+        ICONS.link + 'Source: Wikipedia' +
+      '</a>'
+    );
+  }
+  var qid = (data && data.qid) || "";
+  var label = (data && data.label) || name;
+  var wikidataHref = "https://www.wikidata.org/wiki/" + encodeURIComponent(qid);
   return (
-    '<a class="citation" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' +
-      ICONS.link + 'Source: ' + escapeHtml(sourceName(viewKey)) +
+    '<a class="citation" href="' + escapeHtml(wikidataHref) + '" target="_blank" rel="noopener noreferrer">' +
+      ICONS.link + 'Source: Wikidata &mdash; ' + escapeHtml(label) +
     '</a>'
   );
 }
@@ -283,7 +361,7 @@ function renderDetail(c) {
     } else if (entry.status === "ready") {
       lowerHtml =
         traceHtml(view, c.ticker, 'Fetched ' + escapeHtml(source) + ' for ' + c.ticker + '.') +
-        '<div class="content content-in" style="animation-delay:80ms">' + view.body(entry.data) + citationHtml(selectedView, name) + '</div>';
+        '<div class="content content-in" style="animation-delay:80ms">' + view.body(entry.data) + citationHtml(selectedView, name, entry.data) + '</div>';
     } else {
       lowerHtml = traceHtml(view, c.ticker, 'Fetching ' + escapeHtml(source) + ' for ' + c.ticker + '&hellip;');
     }
@@ -299,7 +377,7 @@ function ensureCaseData(c, view) {
 
   caseDataCache[key] = { status: "loading" };
   var name = TICKER_NAMES[c.ticker] || c.ticker;
-  var request = view === "preassessment" ? fetchWikipediaSummary(name) : fetchHNStories(name);
+  var request = view === "preassessment" ? fetchWikipediaSummary(name) : fetchWikidataProfile(name);
   request
     .then(function (data) {
       caseDataCache[key] = { status: "ready", data: data };

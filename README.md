@@ -13,22 +13,24 @@ assistant something like *"What are the Pre Assessment notes for TSLA?"* every t
   no bearing on that.
 - Selecting a case opens it blank, with a single tab matching that case's **document type**: a
   `Contribution` case only offers the Pre Assessment (Wikipedia) tab, a `Withdrawal` case only
-  offers the Process (Hacker News) tab — regardless of the case's status. Clicking the tab runs a
+  offers the Process (Wikidata) tab — regardless of the case's status. Clicking the tab runs a
   short automation "trace" (client ID matched to a notes source) and then renders the notes, with
   a citation link to where they came from — the same source an analyst would otherwise have opened
   by hand.
 - **Pre Assessment** notes render a company's [Wikipedia](https://www.wikipedia.org/) summary —
   its thumbnail (if one exists), short description, and opening extract.
-- **Process** notes render the top 3 [Hacker News](https://news.ycombinator.com/) stories matching
-  the company name, via the [Algolia HN Search API](https://hn.algolia.com/api) — title, points,
-  and a link.
+- **Process** notes render a company's [Wikidata](https://www.wikidata.org/) profile — its label,
+  one-line description, and whichever of founding date, official website, and employee count are
+  present on the entity — via the public `wbsearchentities` search API and the entity's
+  `Special:EntityData` JSON, both keyless and CORS-enabled with `origin=*` (SEC EDGAR was tried
+  first, but its JSON endpoints don't send CORS headers, so a plain browser `fetch()` to it fails).
 - Both are fetched **live, directly from the browser**, at the moment a case is opened — not
   fabricated data and not a fixed snapshot. Neither API requires a key: both are free, public, and
   CORS-enabled, so `app.js` calls them straight with `fetch()`, no backend involved. The case queue
   metadata itself (case IDs, statuses, submitted times) is invented sample data; only the company
   names looked up are real.
-- If a lookup fails (company not found on Wikipedia, no matching Hacker News stories, network
-  error), the case view shows a friendly inline error instead of breaking the page.
+- If a lookup fails (company not found on Wikipedia or Wikidata, no matching Wikidata entity,
+  network error), the case view shows a friendly inline error instead of breaking the page.
 
 ## Running locally
 
@@ -60,19 +62,21 @@ Because everything runs client-side, the output in `dist/` can be hosted on any 
 ## Integration guide: swapping in real internal systems
 
 This prototype is built so that **all** external data access goes through two functions in
-`app.js`: `fetchWikipediaSummary(name)` and `fetchHNStories(name)`. Everything else — the queue,
-the trace animation, the card/news-list markup — only calls those two functions and doesn't know
-or care that Wikipedia and Hacker News are behind them. Adapting this to a real workflow system
-means replacing what's inside those two functions, not how they're called.
+`app.js`: `fetchWikipediaSummary(name)` and `fetchWikidataProfile(name)` (the latter composes
+`fetchWikidataQid(name)` + `fetchWikidataEntity(qid)`). Everything else — the queue, the trace
+animation, the card/news-list markup — only calls those functions and doesn't know or care that
+Wikipedia and Wikidata are behind them. Adapting this to a real workflow system means replacing
+what's inside those functions, not how they're called.
 
-**1. The integration points.** Both functions take a company name (or, in a real system, whatever
-identifier — client ID, ticker — the case carries) and return a promise that resolves to the JSON
-shape below. Today they call Wikipedia's REST API and the HN Algolia search API directly from the
-browser. To point this at an internal system instead, keep the same function signatures — accept
-an identifier, fetch from a source, resolve to JSON in the shape below — and swap the `fetch()`
-call for one against the internal process-notes link (or whatever internal API serves that case's
-notes). `VIEWS.preassessment.body()` / `VIEWS.process.body()` and the rest of `app.js` would need
-no changes as long as the resolved shape stays the same.
+**1. The integration points.** Both top-level functions take a company name (or, in a real system,
+whatever identifier — client ID, ticker — the case carries) and return a promise that resolves to
+the JSON shape below. Today they call Wikipedia's REST API and Wikidata's `wbsearchentities` +
+`Special:EntityData` APIs directly from the browser. To point this at an internal system instead,
+keep the same function signatures — accept an identifier, fetch from a source, resolve to JSON in
+the shape below — and swap the `fetch()` call for one against the internal process-notes link (or
+whatever internal API serves that case's notes). `VIEWS.preassessment.body()` /
+`VIEWS.process.body()` and the rest of `app.js` would need no changes as long as the resolved
+shape stays the same.
 
 **2. Response shape `app.js` expects.**
 
@@ -91,32 +95,43 @@ no changes as long as the resolved shape stays the same.
 not rendered. `extract` is the body text shown; missing it renders a "No summary available"
 fallback rather than breaking the page.
 
-`fetchHNStories()` should resolve to what `VIEWS.process.body()` reads:
+`fetchWikidataProfile()` should resolve to what `VIEWS.process.body()` reads:
 
 ```json
 {
-  "articles": [
-    { "title": "Headline text", "points": 42, "url": "https://example.com/article", "objectID": "12345" }
+  "qid": "Q312",
+  "label": "Apple Inc.",
+  "description": "American multinational technology company",
+  "facts": [
+    { "label": "Founded", "value": "1976-04-01" },
+    { "label": "Website", "value": "https://www.apple.com/", "href": "https://www.apple.com/" },
+    { "label": "Employees", "value": "164,000" }
   ]
 }
 ```
 
-`articles` is an array (up to 3 are rendered). If `url` is empty, the headline links to
-`https://news.ycombinator.com/item?id=<objectID>` instead — an internal integration returning its
-own article/discussion links wouldn't need `objectID` at all, just a non-empty `url` per item.
+`facts` is an array of whichever of founding date (Wikidata property P571), official website
+(P856), and employee count (P1128) are actually present on the entity — missing ones are omitted
+rather than shown as "N/A". A fact's optional `href` renders its value as a link (used for the
+website fact); `qid` is only used to build the citation link back to the entity's Wikidata page —
+an internal integration wouldn't need it as long as it supplies its own citation-worthy identifier.
 
 On failure, throw an `Error` with a human-readable `message` — `ensureCaseData()` in `app.js`
 catches it and puts that message straight into the inline error box, so keep it end-user-friendly
-(see the existing `throw new Error(...)` calls in both fetch functions for the pattern).
+(see the existing `throw new Error(...)` calls in the fetch functions for the pattern, including
+the "no matching entity found" case).
 
-**3. Authentication.** Wikipedia and the HN Algolia API are public and keyless, so today there's no
-auth at all — `fetch()` is called directly from the browser with nothing to hide. A real internal
-system almost certainly needs something: an SSO/OAuth token, an internal API key, or an endpoint
-only reachable from inside a VPN or private network (which a browser can't reach directly — that
-case would need routing the request through a small backend/proxy the browser *can* reach, unlike
+**3. Authentication.** Wikipedia and Wikidata's JSON endpoints are public and keyless, so today
+there's no auth at all — `fetch()` is called directly from the browser with nothing to hide (note
+that Wikidata's search endpoint needs `origin=*` in the query string to get CORS headers back;
+without it the browser blocks the response even though the request succeeds — this is also why
+SEC EDGAR, which sends no CORS headers at all, couldn't be used here). A real internal system
+almost certainly needs something: an SSO/OAuth token, an internal API key, or an endpoint only
+reachable from inside a VPN or private network (which a browser can't reach directly — that case
+would need routing the request through a small backend/proxy the browser *can* reach, unlike
 today's fully client-side setup). Whatever the real auth model is, it lives inside
-`fetchWikipediaSummary()`/`fetchHNStories()` (or their real-system replacements); the rest of the
-app doesn't need to know about it.
+`fetchWikipediaSummary()`/`fetchWikidataProfile()` (or their real-system replacements); the rest of
+the app doesn't need to know about it.
 
 **4. What this is (and isn't).** This is a proof of concept demonstrating one interaction pattern —
 click a case, auto-fetch its notes, render them inline with a loading state and a citation — so a
